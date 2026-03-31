@@ -10,6 +10,7 @@ import TeacherDashboard from './pages/TeacherDashboard';
 import StudentDashboard from './pages/StudentDashboard';
 import LessonView from './pages/LessonView';
 import AssignmentView from './pages/AssignmentView';
+import QuizView from './pages/QuizView';
 
 function App() {
   return (
@@ -27,6 +28,9 @@ function App() {
               <Route path="/lessons/:id" element={<LessonView />} />
               <Route path="/assignments/:id" element={
                 <PrivateRoute><AssignmentView /></PrivateRoute>
+              } />
+              <Route path="/quizzes/:id" element={
+                <PrivateRoute><QuizView /></PrivateRoute>
               } />
               <Route path="/teacher/dashboard" element={
                 <RoleRoute role="teacher"><TeacherDashboard /></RoleRoute>

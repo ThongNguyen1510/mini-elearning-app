@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { courseAPI, enrollmentAPI, lessonAPI, assignmentAPI, reviewAPI } from '../services/api';
+import { courseAPI, enrollmentAPI, lessonAPI, assignmentAPI, reviewAPI, quizAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
 const CourseDetail = () => {
@@ -10,6 +10,7 @@ const CourseDetail = () => {
   const [course, setCourse] = useState(null);
   const [lessons, setLessons] = useState([]);
   const [assignments, setAssignments] = useState([]);
+  const [quizzes, setQuizzes] = useState([]);
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('info');
@@ -26,6 +27,7 @@ const CourseDetail = () => {
       lessonAPI.getByCourse(id).then(r => setLessons(r.data.lessons)).catch(() => {});
       if (isAuthenticated) {
         assignmentAPI.getByCourse(id).then(r => setAssignments(r.data.assignments)).catch(() => {});
+        quizAPI.getByCourse(id).then(r => setQuizzes(r.data.quizzes)).catch(() => {});
       }
       reviewAPI.getByCourse(id).then(r => setReviews(r.data.reviews)).catch(() => {});
     }
@@ -157,11 +159,12 @@ const CourseDetail = () => {
 
         {/* Tabs */}
         <div className="tabs">
-          {['info', 'lessons', 'assignments', 'reviews'].map(tab => (
+          {['info', 'lessons', 'assignments', 'quizzes', 'reviews'].map(tab => (
             <button key={tab} className={`tab ${activeTab === tab ? 'active' : ''}`}
               onClick={() => setActiveTab(tab)}>
               {{info: '📋 Thông tin', lessons: `📖 Bài học (${lessons.length})`,
                 assignments: `📝 Bài tập (${assignments.length})`,
+                quizzes: `✏️ Trắc nghiệm (${quizzes.length})`,
                 reviews: `⭐ Đánh giá (${reviews.length})`}[tab]}
             </button>
           ))}
@@ -247,6 +250,31 @@ const CourseDetail = () => {
                         <span>📊 Điển tối đa: {a.maxScore}</span>
                         {a.dueDate && <span>📅 Hạn: {new Date(a.dueDate).toLocaleDateString('vi-VN')}</span>}
                         <span>📎 {a.attachments?.length || 0} đính kèm</span>
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Tab Trắc nghiệm */}
+        {activeTab === 'quizzes' && (
+          <div className="tab-content">
+            {!isAuthenticated ? (
+              <div className="empty-state"><p>Đăng nhập để xem trắc nghiệm</p></div>
+            ) : !quizzes.length ? (
+              <div className="empty-state"><span className="empty-icon">✏️</span><h3>Chưa có bài trắc nghiệm</h3></div>
+            ) : (
+              <div className="assignment-list">
+                {quizzes.map(q => (
+                  <Link to={`/quizzes/${q._id}`} key={q._id} className="assignment-card">
+                    <div className="assignment-info">
+                      <h3>✏️ {q.title}</h3>
+                      <div className="assignment-meta">
+                        <span>❓ {q.questions?.length || 0} câu hỏi</span>
+                        {q.timeLimit > 0 && <span>⏱ {q.timeLimit} phút</span>}
                       </div>
                     </div>
                   </Link>

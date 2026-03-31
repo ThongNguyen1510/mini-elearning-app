@@ -126,4 +126,13 @@ export const notificationAPI = {
   delete: (id) => api.delete(`/notifications/${id}`),
 };
 
+// Quiz API
+export const quizAPI = {
+  getByCourse: (courseId) => api.get(`/quizzes/course/${courseId}`),
+  getById: (id) => api.get(`/quizzes/${id}`),
+  create: (data) => api.post('/quizzes', data),
+  submit: (quizId, answers) => api.post(`/quizzes/${quizId}/submit`, { answers }),
+  getMyResults: (quizId) => api.get(`/quizzes/results/my/${quizId}`),
+};
+
 export default api;

@@ -33,6 +33,7 @@ app.use('/api/assignments', require('./routes/assignments'));
 app.use('/api/submissions', require('./routes/submissions'));
 app.use('/api/reviews', require('./routes/reviews'));
 app.use('/api/notifications', require('./routes/notifications'));
+app.use('/api/quizzes', require('./routes/quizzes'));
 
 // Route mặc định
 app.get('/', (req, res) => {

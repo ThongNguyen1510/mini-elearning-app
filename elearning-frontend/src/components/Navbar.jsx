@@ -43,6 +43,10 @@ const Navbar = () => {
     try { await notificationAPI.markRead(id); fetchNotifications(); } catch (err) {}
   };
 
+  const handleDeleteNotif = async (id) => {
+    try { await notificationAPI.delete(id); fetchNotifications(); } catch (err) {}
+  };
+
   const handleLogout = () => { logout(); navigate('/login'); };
 
   return (
@@ -85,13 +89,15 @@ const Navbar = () => {
                       <div className="notif-list">
                         {notifications.slice(0, 10).map(n => (
                           <div key={n._id}
-                            className={`notif-item ${!n.isRead ? 'unread' : ''}`}
-                            onClick={() => { handleMarkRead(n._id); setShowNotif(false); }}>
-                            <div className="notif-title">{n.title}</div>
-                            <div className="notif-message">{n.message}</div>
-                            <div className="notif-time">
-                              {new Date(n.createdAt).toLocaleString('vi-VN')}
+                            className={`notif-item ${!n.isRead ? 'unread' : ''}`}>
+                            <div className="notif-content-wrapper" onClick={() => { handleMarkRead(n._id); setShowNotif(false); }}>
+                              <div className="notif-title">{n.title}</div>
+                              <div className="notif-message">{n.message}</div>
+                              <div className="notif-time">
+                                {new Date(n.createdAt).toLocaleString('vi-VN')}
+                              </div>
                             </div>
+                            <button className="notif-delete" onClick={(e) => { e.stopPropagation(); handleDeleteNotif(n._id); }} title="Xóa thông báo">✕</button>
                           </div>
                         ))}
                       </div>
