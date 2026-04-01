@@ -3,140 +3,247 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { quizAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
+const LABELS = ['A', 'B', 'C', 'D'];
+
 const QuizView = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
   const [quiz, setQuiz] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [currentQuestion, setCurrentQuestion] = useState(0);
-  const [selectedAnswers, setSelectedAnswers] = useState([]);
-  const [isFinished, setIsFinished] = useState(false);
+  const [currentQ, setCurrentQ] = useState(0);
+  const [answers, setAnswers] = useState({});
+  const [submitted, setSubmitted] = useState(false);
   const [result, setResult] = useState(null);
+  const [results, setResults] = useState([]);
   const [message, setMessage] = useState({ text: '', type: '' });
+  const [submitting, setSubmitting] = useState(false);
   const [myAttempts, setMyAttempts] = useState([]);
+  const [startedAt] = useState(Date.now());
 
   useEffect(() => {
     fetchQuiz();
-    if (user?.role === 'student') fetchMyResults();
+    if (user?.role === 'student') fetchMyAttempts();
   }, [id]);
 
   const fetchQuiz = async () => {
     try {
       const res = await quizAPI.getById(id);
       setQuiz(res.data.quiz);
-      setSelectedAnswers(new Array(res.data.quiz.questions.length).fill(null));
-    } catch (err) { setMessage({ text: 'Lỗi tải bài trắc nghiệm', type: 'error' }); }
+    } catch (err) { setMessage({ text: 'Lỗi tải quiz', type: 'error' }); }
     finally { setLoading(false); }
   };
 
-  const fetchMyResults = async () => {
+  const fetchMyAttempts = async () => {
     try {
-      const res = await quizAPI.getMyResults(id);
-      setMyAttempts(res.data.results);
+      const res = await quizAPI.myAttempts(id);
+      setMyAttempts(res.data.attempts);
     } catch (err) {}
   };
 
-  const handleOptionSelect = (optionIndex) => {
-    const newAnswers = [...selectedAnswers];
-    newAnswers[currentQuestion] = optionIndex;
-    setSelectedAnswers(newAnswers);
+  const handleSelect = (qId, optIdx) => {
+    if (submitted) return;
+    setAnswers({ ...answers, [qId]: optIdx });
   };
 
-  const handleSubmitQuiz = async () => {
-    if (selectedAnswers.includes(null)) {
-      if (!window.confirm('Bạn chưa trả lời hết các câu hỏi. Vẫn muốn nộp chứ?')) return;
+  const handleSubmit = async () => {
+    const answered = Object.keys(answers).length;
+    const total = quiz.questions.length;
+    if (answered < total) {
+      if (!window.confirm(`Bạn mới trả lời ${answered}/${total} câu. Vẫn nộp bài?`)) return;
     }
+    setSubmitting(true);
     try {
-      const res = await quizAPI.submit(id, selectedAnswers);
-      setResult(res.data.result);
-      setIsFinished(true);
-      fetchMyResults();
-    } catch (err) { setMessage({ text: 'Lỗi nộp bài', type: 'error' }); }
+      const submitData = {
+        answers: quiz.questions.map(q => ({
+          questionId: q._id,
+          selectedOption: answers[q._id] !== undefined ? answers[q._id] : -1,
+        })),
+        startedAt,
+      };
+      const res = await quizAPI.submit(id, submitData);
+      setResult(res.data.attempt);
+      setResults(res.data.results);
+      setSubmitted(true);
+      setCurrentQ(0);
+      fetchMyAttempts();
+    } catch (err) {
+      setMessage({ text: err.response?.data?.message || 'Lỗi nộp bài', type: 'error' });
+    }
+    finally { setSubmitting(false); }
   };
 
-  if (loading) return <div className="loading">Đang tải...</div>;
-  if (!quiz) return <div className="empty-state"><h3>Không tìm thấy bài trắc nghiệm</h3></div>;
+  const handleRetry = () => {
+    setSubmitted(false);
+    setResult(null);
+    setResults([]);
+    setAnswers({});
+    setCurrentQ(0);
+    fetchQuiz();
+  };
+
+  if (loading) return <div className="loading">Đang tải quiz...</div>;
+  if (!quiz) return <div className="empty-state"><h3>Không tìm thấy quiz</h3></div>;
+
+  const q = quiz.questions[currentQ];
+  const totalQ = quiz.questions.length;
+  const answeredCount = Object.keys(answers).length;
 
   return (
     <div className="page-container">
       <button onClick={() => navigate(-1)} className="btn-back">← Quay lại</button>
 
-      <div className="assignment-detail">
-        <div className="course-detail-header">
-          <h1>✏️ Trắc nghiệm: {quiz.title}</h1>
-          <div className="course-meta">
-            <span>❓ {quiz.questions.length} câu hỏi</span>
+      <div className="quiz-page">
+        {/* Header */}
+        <div className="quiz-header">
+          <h1>📝 {quiz.title}</h1>
+          {quiz.description && <p className="quiz-desc">{quiz.description}</p>}
+          <div className="quiz-info">
+            <span>❓ {totalQ} câu hỏi</span>
             {quiz.timeLimit > 0 && <span>⏱ {quiz.timeLimit} phút</span>}
+            {quiz.passingScore && <span>🎯 Đạt: {quiz.passingScore}%</span>}
+            {!submitted && <span>✅ Đã trả lời: {answeredCount}/{totalQ}</span>}
           </div>
         </div>
 
         {message.text && <div className={`alert alert-${message.type}`}>{message.text}</div>}
 
-        {!isFinished ? (
-          <div className="quiz-container">
+        {/* === CHƯA NỘP BÀI === */}
+        {!submitted && (
+          <>
+            {/* Progress bar */}
             <div className="quiz-progress">
-              Câu hỏi {currentQuestion + 1} / {quiz.questions.length}
-              <div className="progress-bar-container">
-                <div className="progress-bar-fill" style={{ width: `${((currentQuestion + 1) / quiz.questions.length) * 100}%` }}></div>
+              <div className="quiz-progress-text">Câu {currentQ + 1} / {totalQ}</div>
+              <div className="quiz-progress-bar">
+                <div className="quiz-progress-fill" style={{ width: `${((currentQ + 1) / totalQ) * 100}%` }}></div>
               </div>
             </div>
 
+            {/* Question dots */}
+            <div className="quiz-dots">
+              {quiz.questions.map((qq, i) => (
+                <button key={i}
+                  className={`quiz-dot ${i === currentQ ? 'current' : ''} ${answers[qq._id] !== undefined ? 'answered' : ''}`}
+                  onClick={() => setCurrentQ(i)}>
+                  {i + 1}
+                </button>
+              ))}
+            </div>
+
+            {/* Question Card */}
             <div className="quiz-question-card">
-              <h3>{quiz.questions[currentQuestion].question}</h3>
-              <div className="options-list">
-                {quiz.questions[currentQuestion].options.map((opt, idx) => (
+              <div className="quiz-question-number">Câu {currentQ + 1}</div>
+              <h3 className="quiz-question-text">{q.question}</h3>
+
+              <div className="quiz-options">
+                {q.options.map((opt, idx) => (
                   <button key={idx}
-                    className={`option-btn ${selectedAnswers[currentQuestion] === idx ? 'selected' : ''}`}
-                    onClick={() => handleOptionSelect(idx)}>
-                    <span className="option-label">{String.fromCharCode(65 + idx)}</span>
-                    <span className="option-text">{opt}</span>
+                    className={`quiz-option ${answers[q._id] === idx ? 'selected' : ''}`}
+                    onClick={() => handleSelect(q._id, idx)}>
+                    <span className="quiz-option-label">{LABELS[idx]}</span>
+                    <span className="quiz-option-text">{opt}</span>
                   </button>
                 ))}
               </div>
             </div>
 
-            <div className="quiz-navigation">
-              <button className="btn btn-secondary" disabled={currentQuestion === 0}
-                onClick={() => setCurrentQuestion(v => v - 1)}>Câu trước</button>
-              
-              {currentQuestion < quiz.questions.length - 1 ? (
-                <button className="btn btn-primary" onClick={() => setCurrentQuestion(v => v + 1)}>Câu tiếp</button>
-              ) : (
-                <button className="btn btn-accent" onClick={handleSubmitQuiz}>Nộp bài</button>
-              )}
-            </div>
-          </div>
-        ) : (
-          <div className="quiz-result-view">
-            <div className="result-header">
-              <h2>Kết quả của bạn</h2>
-              <div className="result-score">
-                <span className="score-big">{result.score} / {result.totalQuestions}</span>
-                <span className="score-percent">({result.percentage}%)</span>
+            {/* Navigation */}
+            <div className="quiz-nav">
+              <button className="btn btn-secondary" disabled={currentQ === 0}
+                onClick={() => setCurrentQ(v => v - 1)}>
+                ← Câu trước
+              </button>
+              <div className="quiz-nav-center">
+                {currentQ < totalQ - 1 ? (
+                  <button className="btn btn-primary" onClick={() => setCurrentQ(v => v + 1)}>
+                    Câu tiếp →
+                  </button>
+                ) : (
+                  <button className="btn btn-accent btn-lg" onClick={handleSubmit} disabled={submitting}>
+                    {submitting ? '⏳ Đang chấm...' : '📤 Nộp bài'}
+                  </button>
+                )}
               </div>
             </div>
-            
-            <button className="btn btn-primary" onClick={() => { setIsFinished(false); setCurrentQuestion(0); }}>Làm lại</button>
-          </div>
+          </>
         )}
 
-        {/* History for Student */}
-        {user?.role === 'student' && myAttempts.length > 0 && (
-          <div className="submissions-section" style={{ marginTop: '40px' }}>
-            <h2>📊 Lịch sử nộp bài</h2>
-            <div className="teacher-course-list">
-              {myAttempts.map((att, i) => (
-                <div key={att._id} className="teacher-course-card compact">
-                  <div className="teacher-course-header">
-                    <span>Lần nộp {myAttempts.length - i}</span>
-                    <span className={`submission-status status-${att.percentage >= 50 ? 'graded' : 'pending'}`}>
-                      {att.score}/{att.totalQuestions} ({att.percentage}%)
-                    </span>
-                    <span className="text-muted" style={{ fontSize: '0.8rem' }}>
-                      {new Date(att.finishedAt).toLocaleString('vi-VN')}
+        {/* === KẾT QUẢ === */}
+        {submitted && result && (
+          <>
+            <div className={`quiz-result-banner ${result.passed ? 'passed' : 'failed'}`}>
+              <div className="quiz-result-icon">{result.passed ? '🎉' : '😔'}</div>
+              <h2>{result.passed ? 'Chúc mừng! Bạn đã ĐẠT!' : 'Chưa đạt, hãy cố gắng!'}</h2>
+              <div className="quiz-result-stats">
+                <div className="quiz-stat">
+                  <span className="quiz-stat-value">{result.score}%</span>
+                  <span className="quiz-stat-label">Điểm số</span>
+                </div>
+                <div className="quiz-stat">
+                  <span className="quiz-stat-value">{result.correctCount}/{result.totalQuestions}</span>
+                  <span className="quiz-stat-label">Câu đúng</span>
+                </div>
+                <div className="quiz-stat">
+                  <span className="quiz-stat-value">{result.passingScore}%</span>
+                  <span className="quiz-stat-label">Yêu cầu</span>
+                </div>
+              </div>
+              <button className="btn btn-primary" onClick={handleRetry} style={{ marginTop: '16px' }}>
+                🔄 Làm lại
+              </button>
+            </div>
+
+            {/* Chi tiết đáp án */}
+            <div className="quiz-answers-review">
+              <h3>📋 Chi tiết đáp án</h3>
+              {results.map((r, i) => (
+                <div key={i} className={`quiz-answer-card ${r.isCorrect ? 'correct' : 'wrong'}`}>
+                  <div className="quiz-answer-header">
+                    <span className="quiz-answer-num">Câu {i + 1}</span>
+                    <span className={`quiz-answer-badge ${r.isCorrect ? 'correct' : 'wrong'}`}>
+                      {r.isCorrect ? '✅ Đúng' : '❌ Sai'}
                     </span>
                   </div>
+                  <p className="quiz-answer-question">{r.question}</p>
+                  <div className="quiz-answer-options">
+                    {r.options.map((opt, idx) => (
+                      <div key={idx} className={`quiz-answer-option 
+                        ${idx === r.correctOption ? 'is-correct' : ''} 
+                        ${idx === r.selectedOption && idx !== r.correctOption ? 'is-wrong' : ''}
+                        ${idx === r.selectedOption ? 'is-selected' : ''}`}>
+                        <span className="quiz-option-label">{LABELS[idx]}</span>
+                        <span>{opt}</span>
+                        {idx === r.correctOption && <span className="quiz-correct-mark">✓</span>}
+                        {idx === r.selectedOption && idx !== r.correctOption && <span className="quiz-wrong-mark">✗</span>}
+                      </div>
+                    ))}
+                  </div>
+                  {r.explanation && (
+                    <div className="quiz-explanation">
+                      💡 <strong>Giải thích:</strong> {r.explanation}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+
+        {/* Lịch sử */}
+        {user?.role === 'student' && myAttempts.length > 0 && (
+          <div className="quiz-history">
+            <h3>📊 Lịch sử làm bài</h3>
+            <div className="quiz-history-list">
+              {myAttempts.map((att, i) => (
+                <div key={att._id} className="quiz-history-item">
+                  <span className="quiz-history-num">Lần {myAttempts.length - i}</span>
+                  <span className={`submission-status ${att.passed ? 'status-graded' : 'status-pending'}`}>
+                    {att.correctCount}/{att.totalQuestions} ({att.score}%)
+                  </span>
+                  <span className="quiz-history-badge">{att.passed ? '✅ Đạt' : '❌ Chưa đạt'}</span>
+                  <span className="text-muted" style={{ fontSize: '0.78rem' }}>
+                    {new Date(att.completedAt || att.createdAt).toLocaleString('vi-VN')}
+                  </span>
                 </div>
               ))}
             </div>

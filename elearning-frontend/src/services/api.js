@@ -131,8 +131,12 @@ export const quizAPI = {
   getByCourse: (courseId) => api.get(`/quizzes/course/${courseId}`),
   getById: (id) => api.get(`/quizzes/${id}`),
   create: (data) => api.post('/quizzes', data),
-  submit: (quizId, answers) => api.post(`/quizzes/${quizId}/submit`, { answers }),
-  getMyResults: (quizId) => api.get(`/quizzes/results/my/${quizId}`),
+  update: (id, data) => api.put(`/quizzes/${id}`, data),
+  delete: (id) => api.delete(`/quizzes/${id}`),
+  submit: (quizId, data) => api.post(`/quizzes/${quizId}/submit`, data),
+  myAttempts: (quizId) => api.get(`/quizzes/${quizId}/my-attempts`),
+  allAttempts: (quizId) => api.get(`/quizzes/${quizId}/all-attempts`),
 };
 
 export default api;
+

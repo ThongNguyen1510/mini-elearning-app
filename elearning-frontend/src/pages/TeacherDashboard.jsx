@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { courseAPI, categoryAPI, lessonAPI, assignmentAPI, submissionAPI } from '../services/api';
+import { courseAPI, categoryAPI, lessonAPI, assignmentAPI, submissionAPI, quizAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
 

@@ -1,10 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { notificationAPI } from '../services/api';
 
 const Navbar = () => {
   const { user, isAuthenticated, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -59,6 +61,12 @@ const Navbar = () => {
 
         <div className="navbar-links">
           <Link to="/courses" className="nav-link">Khóa học</Link>
+
+          {/* Theme Toggle */}
+          <button className="theme-toggle" onClick={toggleTheme} title={theme === 'dark' ? 'Chế độ sáng' : 'Chế độ tối'}>
+            <span className={`theme-icon ${theme === 'dark' ? 'active' : ''}`}>🌙</span>
+            <span className={`theme-icon ${theme === 'light' ? 'active' : ''}`}>☀️</span>
+          </button>
 
           {isAuthenticated ? (
             <>
