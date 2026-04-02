@@ -12,6 +12,7 @@ const AssignmentView = () => {
   const [submissions, setSubmissions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [submitContent, setSubmitContent] = useState('');
+  const [submitFiles, setSubmitFiles] = useState([]);
   const [submitLoading, setSubmitLoading] = useState(false);
   const [message, setMessage] = useState({ text: '', type: '' });
 
@@ -47,14 +48,38 @@ const AssignmentView = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!submitContent.trim() && submitFiles.length === 0) {
+      showMsg('Vui lòng nhập nội dung hoặc đính kèm file', 'error');
+      return;
+    }
     setSubmitLoading(true);
     try {
-      await submissionAPI.create({ assignmentId: id, content: submitContent });
-      showMsg('Nộp bài thành công! 🎉');
+      const res = await submissionAPI.create({ assignmentId: id, content: submitContent });
+      const submissionId = res.data.submission._id;
+
+      // Upload files nếu có
+      for (const file of submitFiles) {
+        const fd = new FormData();
+        fd.append('file', file);
+        await submissionAPI.upload(submissionId, fd);
+      }
+
+      showMsg(`Nộp bài thành công${submitFiles.length > 0 ? ` (${submitFiles.length} file)` : ''}! 🎉`);
       setSubmitContent('');
+      setSubmitFiles([]);
       fetchData();
     } catch (err) { showMsg(err.response?.data?.message || 'Lỗi', 'error'); }
     finally { setSubmitLoading(false); }
+  };
+
+  const handleFileSelect = (e) => {
+    const files = Array.from(e.target.files);
+    setSubmitFiles(prev => [...prev, ...files]);
+    e.target.value = '';
+  };
+
+  const removeFile = (index) => {
+    setSubmitFiles(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleUploadSubmission = async (submissionId, e) => {
@@ -174,8 +199,34 @@ const AssignmentView = () => {
                 <h2>✍️ Nộp bài</h2>
                 <textarea placeholder="Nội dung bài làm..." value={submitContent}
                   onChange={e => setSubmitContent(e.target.value)} rows={5} />
+
+                {/* File picker */}
+                <div className="submit-file-section">
+                  <label className="btn btn-sm btn-secondary upload-btn">
+                    📎 Đính kèm file
+                    <input type="file" style={{ display: 'none' }} multiple
+                      onChange={handleFileSelect}
+                      accept=".pdf,.doc,.docx,.ppt,.pptx,.jpg,.jpeg,.png,.gif,.webp,.mp4,.webm,.zip,.rar" />
+                  </label>
+                  <span className="text-muted" style={{ fontSize: '0.8rem' }}>PDF, Word, ảnh, video...</span>
+                </div>
+
+                {/* Selected files preview */}
+                {submitFiles.length > 0 && (
+                  <div className="submit-files-preview">
+                    {submitFiles.map((f, i) => (
+                      <div key={i} className="submit-file-item">
+                        <span className="material-icon">{f.type?.startsWith('image/') ? '🖼️' : f.type === 'application/pdf' ? '📄' : '📎'}</span>
+                        <span className="submit-file-name">{f.name}</span>
+                        <span className="submit-file-size">{(f.size / 1024).toFixed(0)} KB</span>
+                        <button type="button" className="btn btn-icon btn-danger" onClick={() => removeFile(i)} title="Xóa">✕</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
                 <button type="submit" className="btn btn-primary" disabled={submitLoading}>
-                  {submitLoading ? 'Đang nộp...' : '📤 Nộp bài'}
+                  {submitLoading ? '⏳ Đang nộp...' : `📤 Nộp bài${submitFiles.length > 0 ? ` (${submitFiles.length} file)` : ''}`}
                 </button>
               </form>
             )}

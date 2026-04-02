@@ -1,10 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { notificationAPI } from '../services/api';
 
 const Navbar = () => {
   const { user, isAuthenticated, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -43,6 +45,10 @@ const Navbar = () => {
     try { await notificationAPI.markRead(id); fetchNotifications(); } catch (err) {}
   };
 
+  const handleDeleteNotif = async (id) => {
+    try { await notificationAPI.delete(id); fetchNotifications(); } catch (err) {}
+  };
+
   const handleLogout = () => { logout(); navigate('/login'); };
 
   return (
@@ -55,6 +61,12 @@ const Navbar = () => {
 
         <div className="navbar-links">
           <Link to="/courses" className="nav-link">Khóa học</Link>
+
+          {/* Theme Toggle */}
+          <button className="theme-toggle" onClick={toggleTheme} title={theme === 'dark' ? 'Chế độ sáng' : 'Chế độ tối'}>
+            <span className={`theme-icon ${theme === 'dark' ? 'active' : ''}`}>🌙</span>
+            <span className={`theme-icon ${theme === 'light' ? 'active' : ''}`}>☀️</span>
+          </button>
 
           {isAuthenticated ? (
             <>
@@ -85,13 +97,15 @@ const Navbar = () => {
                       <div className="notif-list">
                         {notifications.slice(0, 10).map(n => (
                           <div key={n._id}
-                            className={`notif-item ${!n.isRead ? 'unread' : ''}`}
-                            onClick={() => { handleMarkRead(n._id); setShowNotif(false); }}>
-                            <div className="notif-title">{n.title}</div>
-                            <div className="notif-message">{n.message}</div>
-                            <div className="notif-time">
-                              {new Date(n.createdAt).toLocaleString('vi-VN')}
+                            className={`notif-item ${!n.isRead ? 'unread' : ''}`}>
+                            <div className="notif-content-wrapper" onClick={() => { handleMarkRead(n._id); setShowNotif(false); }}>
+                              <div className="notif-title">{n.title}</div>
+                              <div className="notif-message">{n.message}</div>
+                              <div className="notif-time">
+                                {new Date(n.createdAt).toLocaleString('vi-VN')}
+                              </div>
                             </div>
+                            <button className="notif-delete" onClick={(e) => { e.stopPropagation(); handleDeleteNotif(n._id); }} title="Xóa thông báo">✕</button>
                           </div>
                         ))}
                       </div>
