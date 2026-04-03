@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { courseAPI, enrollmentAPI, lessonAPI, assignmentAPI, reviewAPI, quizAPI } from '../services/api';
+import { courseAPI, enrollmentAPI, lessonAPI, assignmentAPI, reviewAPI, quizAPI, progressAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
 const CourseDetail = () => {
@@ -16,6 +16,7 @@ const CourseDetail = () => {
   const [activeTab, setActiveTab] = useState('info');
   const [actionLoading, setActionLoading] = useState(false);
   const [message, setMessage] = useState({ text: '', type: '' });
+  const [progress, setProgress] = useState({ completedLessons: [], percent: 0, totalLessons: 0, completedCount: 0 });
 
   // Review form
   const [reviewForm, setReviewForm] = useState({ rating: 5, comment: '' });
@@ -30,6 +31,9 @@ const CourseDetail = () => {
         quizAPI.getByCourse(id).then(r => setQuizzes(r.data.quizzes)).catch(() => {});
       }
       reviewAPI.getByCourse(id).then(r => setReviews(r.data.reviews)).catch(() => {});
+      if (isAuthenticated && user?.role === 'student') {
+        progressAPI.get(id).then(r => setProgress(r.data.progress)).catch(() => {});
+      }
     }
   }, [course]);
 
@@ -212,21 +216,60 @@ const CourseDetail = () => {
         {/* Tab Bài học */}
         {activeTab === 'lessons' && (
           <div className="tab-content">
+            {/* Progress overview for enrolled students */}
+            {isEnrolled && lessons.length > 0 && (
+              <div className="lesson-progress-overview">
+                <div className="course-progress-label">
+                  <span>📊 Tiến độ học tập</span>
+                  <span style={{ fontWeight: 700, color: progress.percent >= 80 ? 'var(--accent-green)' : progress.percent >= 50 ? 'var(--accent-yellow)' : 'var(--accent-primary)' }}>
+                    {progress.completedCount || 0}/{progress.totalLessons || lessons.length} bài ({progress.percent || 0}%)
+                  </span>
+                </div>
+                <div className="course-progress-bar" style={{ height: '8px' }}>
+                  <div className="course-progress-fill" style={{ 
+                    width: `${progress.percent || 0}%`,
+                    background: progress.percent >= 80 ? 'var(--accent-green)' : progress.percent >= 50 ? 'var(--accent-yellow)' : 'var(--accent-primary)'
+                  }} />
+                </div>
+              </div>
+            )}
             {!lessons.length ? <div className="empty-state"><span className="empty-icon">📖</span><h3>Chưa có bài học</h3></div> : (
               <div className="lesson-list">
-                {lessons.map((lesson, i) => (
-                  <Link to={`/lessons/${lesson._id}`} key={lesson._id} className="lesson-card">
-                    <div className="lesson-order">{i + 1}</div>
-                    <div className="lesson-info">
-                      <h3>{lesson.title}</h3>
-                      <div className="lesson-meta">
-                        {lesson.duration > 0 && <span>⏱ {lesson.duration} phút</span>}
-                        {lesson.videoUrl && <span>🎬 Có video</span>}
-                        <span>📎 {lesson.attachments?.length || 0} tài liệu</span>
-                      </div>
+                {lessons.map((lesson, i) => {
+                  const isCompleted = progress.completedLessons?.includes(lesson._id);
+                  return (
+                    <div key={lesson._id} className={`lesson-card ${isCompleted ? 'completed' : ''}`}>
+                      {isEnrolled && (
+                        <button
+                          className={`lesson-check ${isCompleted ? 'checked' : ''}`}
+                          onClick={async (e) => {
+                            e.preventDefault();
+                            try {
+                              const res = isCompleted
+                                ? await progressAPI.uncomplete(id, lesson._id)
+                                : await progressAPI.complete(id, lesson._id);
+                              setProgress(res.data.progress);
+                            } catch (err) { console.error(err); }
+                          }}
+                          title={isCompleted ? 'Bỏ hoàn thành' : 'Đánh dấu hoàn thành'}
+                        >
+                          {isCompleted ? '✅' : '⬜'}
+                        </button>
+                      )}
+                      <Link to={`/lessons/${lesson._id}`} className="lesson-link" style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, textDecoration: 'none', color: 'inherit' }}>
+                        <div className="lesson-order">{i + 1}</div>
+                        <div className="lesson-info">
+                          <h3 style={{ opacity: isCompleted ? 0.6 : 1 }}>{lesson.title}</h3>
+                          <div className="lesson-meta">
+                            {lesson.duration > 0 && <span>⏱ {lesson.duration} phút</span>}
+                            {lesson.videoUrl && <span>🎬 Có video</span>}
+                            <span>📎 {lesson.attachments?.length || 0} tài liệu</span>
+                          </div>
+                        </div>
+                      </Link>
                     </div>
-                  </Link>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>

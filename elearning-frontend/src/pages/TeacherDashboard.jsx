@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { courseAPI, categoryAPI, lessonAPI, assignmentAPI, submissionAPI, quizAPI } from '../services/api';
+import { courseAPI, categoryAPI, lessonAPI, assignmentAPI, submissionAPI, quizAPI, statsAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
 
@@ -9,6 +9,7 @@ const TeacherDashboard = () => {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState({ text: '', type: '' });
+  const [stats, setStats] = useState(null);
 
   // Course form
   const [showCourseForm, setShowCourseForm] = useState(false);
@@ -73,6 +74,12 @@ const TeacherDashboard = () => {
       setCourseLessons(lessonsMap);
       setCourseAssignments(assignmentsMap);
       setCourseQuizzes(quizzesMap);
+
+      // Fetch stats
+      try {
+        const sRes = await statsAPI.teacher();
+        setStats(sRes.data.stats);
+      } catch (err) {}
     } catch (err) { console.error(err); }
     finally { setLoading(false); }
   };
@@ -328,6 +335,54 @@ const TeacherDashboard = () => {
       </div>
 
       {message.text && <div className={`alert alert-${message.type}`}>{message.text}</div>}
+
+      {/* Stats Overview */}
+      {stats && (
+        <div className="stats-grid">
+          <div className="stat-card">
+            <div className="stat-card-icon">📚</div>
+            <div className="stat-card-info">
+              <span className="stat-card-value">{stats.totalCourses}</span>
+              <span className="stat-card-label">Khóa học</span>
+            </div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-card-icon">🎓</div>
+            <div className="stat-card-info">
+              <span className="stat-card-value">{stats.totalStudents}</span>
+              <span className="stat-card-label">Học viên</span>
+            </div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-card-icon">📝</div>
+            <div className="stat-card-info">
+              <span className="stat-card-value">{stats.totalSubmissions}</span>
+              <span className="stat-card-label">Bài nộp</span>
+            </div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-card-icon">⏳</div>
+            <div className="stat-card-info">
+              <span className="stat-card-value">{stats.pendingSubmissions}</span>
+              <span className="stat-card-label">Chờ chấm</span>
+            </div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-card-icon">❓</div>
+            <div className="stat-card-info">
+              <span className="stat-card-value">{stats.totalQuizAttempts}</span>
+              <span className="stat-card-label">Lượt quiz</span>
+            </div>
+          </div>
+          <div className="stat-card accent">
+            <div className="stat-card-icon">⭐</div>
+            <div className="stat-card-info">
+              <span className="stat-card-value">{stats.avgRating}</span>
+              <span className="stat-card-label">Đánh giá TB</span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Actions */}
       <div className="dashboard-actions" style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>

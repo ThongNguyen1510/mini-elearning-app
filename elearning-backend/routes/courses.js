@@ -13,7 +13,7 @@ const router = express.Router();
 // @access  Public
 router.get('/', async (req, res) => {
   try {
-    const { search, teacher, category } = req.query;
+    const { search, teacher, category, sort, page = 1, limit = 9 } = req.query;
     let query = {};
 
     if (search) {
@@ -23,23 +23,39 @@ router.get('/', async (req, res) => {
       ];
     }
 
-    if (teacher) {
-      query.teacher = teacher;
-    }
+    if (teacher) query.teacher = teacher;
+    if (category) query.category = category;
 
-    if (category) {
-      query.category = category;
-    }
+    // Sorting
+    let sortOption = { createdAt: -1 };
+    if (sort === 'oldest') sortOption = { createdAt: 1 };
+    else if (sort === 'rating') sortOption = { averageRating: -1, createdAt: -1 };
+    else if (sort === 'popular') sortOption = { 'students.length': -1, createdAt: -1 };
+    else if (sort === 'az') sortOption = { title: 1 };
+    else if (sort === 'za') sortOption = { title: -1 };
+
+    // Pagination
+    const pageNum = Math.max(1, parseInt(page));
+    const limitNum = Math.min(50, Math.max(1, parseInt(limit)));
+    const skip = (pageNum - 1) * limitNum;
+
+    const total = await Course.countDocuments(query);
+    const totalPages = Math.ceil(total / limitNum);
 
     const courses = await Course.find(query)
       .populate('teacher', 'name email')
       .populate('students', 'name email')
       .populate('category', 'name icon')
-      .sort({ createdAt: -1 });
+      .sort(sortOption)
+      .skip(skip)
+      .limit(limitNum);
 
     res.json({
       success: true,
       count: courses.length,
+      total,
+      page: pageNum,
+      totalPages,
       courses,
     });
   } catch (err) {

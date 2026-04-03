@@ -34,6 +34,9 @@ app.use('/api/submissions', require('./routes/submissions'));
 app.use('/api/reviews', require('./routes/reviews'));
 app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/quizzes', require('./routes/quizzes'));
+app.use('/api/progress', require('./routes/progress'));
+app.use('/api/stats', require('./routes/stats'));
+app.use('/api/comments', require('./routes/comments'));
 
 // Route mặc định
 app.get('/', (req, res) => {

@@ -143,4 +143,65 @@ router.get('/me', protect, async (req, res) => {
   }
 });
 
+// @route   PUT /api/auth/profile
+// @desc    Cập nhật thông tin cá nhân
+// @access  Private
+router.put('/profile', protect, async (req, res) => {
+  try {
+    const { name } = req.body;
+    if (!name?.trim()) {
+      return res.status(400).json({ success: false, message: 'Tên không được trống.' });
+    }
+
+    const user = await User.findByIdAndUpdate(
+      req.user.id,
+      { name: name.trim() },
+      { new: true, runValidators: true }
+    );
+
+    const userData = { id: user._id, name: user.name, email: user.email, role: user.role };
+
+    res.json({
+      success: true,
+      message: 'Cập nhật thông tin thành công!',
+      user: userData,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: 'Lỗi server.' });
+  }
+});
+
+// @route   PUT /api/auth/password
+// @desc    Đổi mật khẩu
+// @access  Private
+router.put('/password', protect, async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ success: false, message: 'Vui lòng nhập đầy đủ.' });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ success: false, message: 'Mật khẩu mới phải có ít nhất 6 ký tự.' });
+    }
+
+    const user = await User.findById(req.user.id).select('+password');
+    const isMatch = await user.matchPassword(currentPassword);
+
+    if (!isMatch) {
+      return res.status(401).json({ success: false, message: 'Mật khẩu hiện tại không đúng.' });
+    }
+
+    user.password = newPassword;
+    await user.save();
+
+    res.json({ success: true, message: 'Đổi mật khẩu thành công!' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: 'Lỗi server.' });
+  }
+});
+
 module.exports = router;

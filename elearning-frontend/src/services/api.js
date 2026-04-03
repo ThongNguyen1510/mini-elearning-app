@@ -33,6 +33,8 @@ export const authAPI = {
   register: (data) => api.post('/auth/register', data),
   login: (data) => api.post('/auth/login', data),
   getMe: () => api.get('/auth/me'),
+  updateProfile: (data) => api.put('/auth/profile', data),
+  changePassword: (data) => api.put('/auth/password', data),
 };
 
 // Category API
@@ -138,5 +140,26 @@ export const quizAPI = {
   allAttempts: (quizId) => api.get(`/quizzes/${quizId}/all-attempts`),
 };
 
-export default api;
+// Progress API
+export const progressAPI = {
+  get: (courseId) => api.get(`/progress/${courseId}`),
+  getAll: () => api.get('/progress/my/all'),
+  complete: (courseId, lessonId) => api.post(`/progress/${courseId}/complete/${lessonId}`),
+  uncomplete: (courseId, lessonId) => api.post(`/progress/${courseId}/uncomplete/${lessonId}`),
+};
 
+// Stats API
+export const statsAPI = {
+  teacher: () => api.get('/stats/teacher'),
+  student: () => api.get('/stats/student'),
+};
+
+// Comment API
+export const commentAPI = {
+  getByLesson: (lessonId) => api.get(`/comments/lesson/${lessonId}`),
+  create: (data) => api.post('/comments', data),
+  update: (id, data) => api.put(`/comments/${id}`, data),
+  delete: (id) => api.delete(`/comments/${id}`),
+};
+
+export default api;
