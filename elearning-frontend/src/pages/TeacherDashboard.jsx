@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { courseAPI, categoryAPI, lessonAPI, assignmentAPI, submissionAPI } from '../services/api';
+import { courseAPI, categoryAPI, lessonAPI, assignmentAPI, submissionAPI, quizAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
 
@@ -294,15 +294,25 @@ const TeacherDashboard = () => {
   };
 
   const updateQuizQuestion = (qIdx, field, value) => {
-    const newQs = [...quizForm.questions];
-    newQs[qIdx][field] = value;
-    setQuizForm({ ...quizForm, questions: newQs });
+    setQuizForm(prev => ({
+      ...prev,
+      questions: prev.questions.map((q, idx) => 
+        idx === qIdx ? { ...q, [field]: value } : q
+      )
+    }));
   };
 
   const updateQuizOption = (qIdx, oIdx, value) => {
-    const newQs = [...quizForm.questions];
-    newQs[qIdx].options[oIdx] = value;
-    setQuizForm({ ...quizForm, questions: newQs });
+    setQuizForm(prev => ({
+      ...prev,
+      questions: prev.questions.map((q, idx) => {
+        if (idx !== qIdx) return q;
+        return {
+          ...q,
+          options: q.options.map((opt, oi) => oi === oIdx ? value : opt)
+        };
+      })
+    }));
   };
 
   const getFileIcon = (t) => {
@@ -485,23 +495,52 @@ const TeacherDashboard = () => {
                   
                   <div className="questions-editor">
                     {quizForm.questions.map((q, qIdx) => (
-                      <div key={qIdx} className="question-edit-card" style={{ padding: '12px', border: '1px solid #eee', marginBottom: '12px', borderRadius: '8px' }}>
-                        <div className="form-group"><label>Câu hỏi {qIdx + 1}</label>
-                          <input type="text" value={q.question} onChange={e => updateQuizQuestion(qIdx, 'question', e.target.value)} required /></div>
-                        <div className="options-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                      <div key={qIdx} className="question-edit-card">
+                        <div className="question-edit-header" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
+                          <h5 style={{ color: 'var(--accent-secondary)' }}>Câu hỏi {qIdx + 1}</h5>
+                          {quizForm.questions.length > 1 && (
+                            <button type="button" className="btn-remove-q" onClick={() => {
+                              setQuizForm(prev => ({ ...prev, questions: prev.questions.filter((_, i) => i !== qIdx) }));
+                            }}>✕ Xóa câu này</button>
+                          )}
+                        </div>
+                        <div className="form-group">
+                          <input 
+                            type="text" 
+                            value={q.question} 
+                            placeholder="Nhập nội dung câu hỏi..."
+                            onChange={e => updateQuizQuestion(qIdx, 'question', e.target.value)} 
+                            required 
+                          />
+                        </div>
+                        <div className="options-grid-modern">
                           {q.options.map((opt, oIdx) => (
-                            <div key={oIdx} className="form-group">
-                              <label>Lựa chọn {String.fromCharCode(65 + oIdx)}</label>
-                              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                                <input type="radio" name={`correct-${qIdx}`} checked={q.correctOption === oIdx} onChange={() => updateQuizQuestion(qIdx, 'correctOption', oIdx)} />
-                                <input type="text" value={opt} onChange={e => updateQuizOption(qIdx, oIdx, e.target.value)} required />
-                              </div>
+                            <div key={oIdx} className={`quiz-option-edit-wrap ${q.correctOption === oIdx ? 'is-correct' : ''}`}>
+                              <label className="radio-modern">
+                                <input 
+                                  type="radio" 
+                                  name={`correct-${qIdx}`} 
+                                  checked={q.correctOption === oIdx} 
+                                  onChange={() => updateQuizQuestion(qIdx, 'correctOption', oIdx)} 
+                                />
+                                <span className="radio-dot"></span>
+                                <span className="radio-label">{String.fromCharCode(65 + oIdx)}</span>
+                              </label>
+                              <input 
+                                type="text" 
+                                value={opt} 
+                                placeholder={`Nhập nội dung lựa chọn ${String.fromCharCode(65 + oIdx)}...`}
+                                onChange={e => updateQuizOption(qIdx, oIdx, e.target.value)} 
+                                required 
+                              />
                             </div>
                           ))}
                         </div>
                       </div>
                     ))}
-                    <button type="button" onClick={addQuizQuestion} className="btn btn-sm btn-secondary">➕ Thêm câu hỏi</button>
+                    <button type="button" onClick={addQuizQuestion} className="btn btn-secondary btn-full btn-sm" style={{ borderStyle: 'dashed' }}>
+                      ➕ Thêm câu hỏi mới
+                    </button>
                   </div>
 
                   <div className="form-actions" style={{ marginTop: '16px' }}>
