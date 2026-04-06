@@ -103,9 +103,9 @@ const CourseList = () => {
         <p>Khám phá và đăng ký các khóa học phù hợp với bạn</p>
       </div>
 
-      {/* Search + Sort */}
+      {/* Search + Category Filter + Sort */}
       <div className="search-filter-bar">
-        <div className="search-bar" style={{ flex: 1 }}>
+        <div className="search-bar">
           <input
             type="text"
             placeholder="🔍 Tìm kiếm khóa học..."
@@ -115,33 +115,33 @@ const CourseList = () => {
             id="search-courses"
           />
         </div>
+
+        {categories.length > 0 && (
+          <div className="category-filter">
+            <button
+              className={`category-chip ${!selectedCategory ? 'active' : ''}`}
+              onClick={() => setSelectedCategory('')}
+            >
+              Tất cả
+            </button>
+            {categories.map((cat) => (
+              <button
+                key={cat._id}
+                className={`category-chip ${selectedCategory === cat._id ? 'active' : ''}`}
+                onClick={() => setSelectedCategory(cat._id)}
+              >
+                {cat.icon} {cat.name}
+              </button>
+            ))}
+          </div>
+        )}
+
         <select className="sort-select" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
           {SORT_OPTIONS.map(opt => (
             <option key={opt.value} value={opt.value}>{opt.label}</option>
           ))}
         </select>
       </div>
-
-      {/* Category Filter */}
-      {categories.length > 0 && (
-        <div className="category-filter">
-          <button
-            className={`category-chip ${!selectedCategory ? 'active' : ''}`}
-            onClick={() => setSelectedCategory('')}
-          >
-            Tất cả
-          </button>
-          {categories.map((cat) => (
-            <button
-              key={cat._id}
-              className={`category-chip ${selectedCategory === cat._id ? 'active' : ''}`}
-              onClick={() => setSelectedCategory(cat._id)}
-            >
-              {cat.icon} {cat.name}
-            </button>
-          ))}
-        </div>
-      )}
 
       {/* Result count */}
       {!loading && (
