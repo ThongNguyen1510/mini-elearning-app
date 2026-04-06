@@ -11,6 +11,7 @@ import StudentDashboard from './pages/StudentDashboard';
 import LessonView from './pages/LessonView';
 import AssignmentView from './pages/AssignmentView';
 import QuizView from './pages/QuizView';
+import Profile from './pages/Profile';
 
 function App() {
   return (
@@ -37,6 +38,9 @@ function App() {
               } />
               <Route path="/student/dashboard" element={
                 <RoleRoute role="student"><StudentDashboard /></RoleRoute>
+              } />
+              <Route path="/profile" element={
+                <PrivateRoute><Profile /></PrivateRoute>
               } />
             </Routes>
           </main>

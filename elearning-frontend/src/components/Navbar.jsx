@@ -62,12 +62,6 @@ const Navbar = () => {
         <div className="navbar-links">
           <Link to="/courses" className="nav-link">Khóa học</Link>
 
-          {/* Theme Toggle */}
-          <button className="theme-toggle" onClick={toggleTheme} title={theme === 'dark' ? 'Chế độ sáng' : 'Chế độ tối'}>
-            <span className={`theme-icon ${theme === 'dark' ? 'active' : ''}`}>🌙</span>
-            <span className={`theme-icon ${theme === 'light' ? 'active' : ''}`}>☀️</span>
-          </button>
-
           {isAuthenticated ? (
             <>
               {user.role === 'teacher' && (
@@ -115,9 +109,9 @@ const Navbar = () => {
               </div>
 
               <div className="nav-user">
-                <span className="user-badge" data-role={user.role}>
+                <Link to="/profile" className="user-badge" data-role={user.role}>
                   {user.role === 'teacher' ? '👨‍🏫' : '🎓'} {user.name}
-                </span>
+                </Link>
                 <button onClick={handleLogout} className="btn-logout">Đăng xuất</button>
               </div>
             </>
@@ -127,6 +121,12 @@ const Navbar = () => {
               <Link to="/register" className="btn-nav btn-register">Đăng ký</Link>
             </div>
           )}
+
+          {/* Theme Toggle — ngoài cùng bên phải */}
+          <button className="theme-toggle" onClick={toggleTheme} title={theme === 'dark' ? 'Chế độ sáng' : 'Chế độ tối'}>
+            <span className={`theme-icon ${theme === 'dark' ? 'active' : ''}`}>🌙</span>
+            <span className={`theme-icon ${theme === 'light' ? 'active' : ''}`}>☀️</span>
+          </button>
         </div>
       </div>
     </nav>
